@@ -87,11 +87,16 @@ Linux (env with the build's wheels installed):
 MODEL_DIR=/path/to/Qwen3-0.6B_int4 ./run_demo.sh /path/to/venv
 ```
 
-Running a script by hand, `--npuw-log` turns on NPUW plugin logging without
-touching the environment:
+`pa_demo.py` is one script with three parts, runnable individually or
+together (colored when on a terminal, plain when teed to a log):
 
 ```powershell
-python pa_demo.py --npuw-log INFO      # or VERBOSE; pa_parity.py takes it too
+python pa_demo.py                      # all three parts
+python pa_demo.py cb                   # batched CB pipeline only
+python pa_demo.py llm                  # LLMPipeline routing only
+python pa_demo.py parity               # CPU-vs-NPU parity + similarity score
+python pa_demo.py cb llm --npuw-log INFO   # with NPUW plugin logging
+python pa_demo.py parity --model C:\models\other-int4 --tokens 64
 ```
 
 Three runs land in `logs/`, timestamped:
@@ -100,7 +105,7 @@ Three runs land in `logs/`, timestamped:
 |---|---|
 | `*_01_demo.log` | Batched CB generation + `LLMPipeline` routing, readable output, tok/s |
 | `*_02_demo_npuw_info.log` | Same with `OPENVINO_NPUW_LOG_LEVEL=INFO` — the PA front-end visibly engaging |
-| `*_03_parity.log` | Greedy token parity, plain `CPU` vs `NPU + NPU_USE_NPUW/NPUW_PA`, three prompt classes (short / >128 / >1024) — expected `PARITY: PASS`, token-identical on all three |
+| `*_03_parity.log` | Greedy parity, plain `CPU` vs `NPU + NPU_USE_NPUW/NPUW_PA`, three prompt classes (short / >128 / >1024) — per-prompt PASS/FAIL plus a text similarity score; expected `PARITY: PASS`, 100% on all three |
 
 The parity expectation matches the PR's Validation section: token-identical
 on all three prompt classes at PR 1. Note for anyone extending the harness:
@@ -114,4 +119,4 @@ CPU defaults to a u8 KV cache.
   the pipeline's KVCacheManager reads are the executing device's own.
 - The INFO log names `PACompiledModel` taking the model and the fallback
   device it compiled on.
-- `PARITY: PASS`.
+- `PARITY: PASS`, mean similarity 100%.

@@ -17,12 +17,12 @@ mkdir -p "$here/logs"
 stamp=$(date +%Y%m%d-%H%M%S)
 
 echo "=== demo (quiet) ==="
-python3 "$here/pa_demo.py" 2>&1 | tee "$here/logs/${stamp}_01_demo.log"
+python3 "$here/pa_demo.py" cb llm 2>&1 | tee "$here/logs/${stamp}_01_demo.log"
 
 echo "=== demo (NPUW log INFO, shows the PA front-end engaging) ==="
-OPENVINO_NPUW_LOG_LEVEL=INFO python3 "$here/pa_demo.py" 2>&1 | tee "$here/logs/${stamp}_02_demo_npuw_info.log"
+python3 "$here/pa_demo.py" cb llm --npuw-log INFO 2>&1 | tee "$here/logs/${stamp}_02_demo_npuw_info.log"
 
-echo "=== parity: plain CPU vs NPU + NPUW_PA ==="
-python3 "$here/pa_parity.py" 2>&1 | tee "$here/logs/${stamp}_03_parity.log"
+echo "=== parity + similarity: plain CPU vs NPU + NPUW_PA ==="
+python3 "$here/pa_demo.py" parity 2>&1 | tee "$here/logs/${stamp}_03_parity.log"
 
 echo "All runs green. Logs in $here/logs"

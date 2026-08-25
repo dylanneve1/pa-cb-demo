@@ -65,17 +65,15 @@ $env:MODEL_DIR = $ModelDir
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 
 Write-Host "=== demo (quiet) ==="
-python "$PSScriptRoot\pa_demo.py" 2>&1 | Tee-Object "$logs\$($stamp)_01_demo.log"
+python "$PSScriptRoot\pa_demo.py" cb llm 2>&1 | Tee-Object "$logs\$($stamp)_01_demo.log"
 if ($LASTEXITCODE -ne 0) { Write-Host "demo failed"; exit 1 }
 
 Write-Host "=== demo (NPUW log INFO, shows the PA front-end engaging) ==="
-$env:OPENVINO_NPUW_LOG_LEVEL = 'INFO'
-python "$PSScriptRoot\pa_demo.py" 2>&1 | Tee-Object "$logs\$($stamp)_02_demo_npuw_info.log"
-$env:OPENVINO_NPUW_LOG_LEVEL = ''
+python "$PSScriptRoot\pa_demo.py" cb llm --npuw-log INFO 2>&1 | Tee-Object "$logs\$($stamp)_02_demo_npuw_info.log"
 if ($LASTEXITCODE -ne 0) { Write-Host "demo (INFO) failed"; exit 1 }
 
-Write-Host "=== parity: plain CPU vs NPU + NPUW_PA ==="
-python "$PSScriptRoot\pa_parity.py" 2>&1 | Tee-Object "$logs\$($stamp)_03_parity.log"
+Write-Host "=== parity + similarity: plain CPU vs NPU + NPUW_PA ==="
+python "$PSScriptRoot\pa_demo.py" parity 2>&1 | Tee-Object "$logs\$($stamp)_03_parity.log"
 if ($LASTEXITCODE -ne 0) { Write-Host "PARITY FAILED"; exit 1 }
 
 Write-Host "All runs green. Logs in $($logs)"
