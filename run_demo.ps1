@@ -38,7 +38,11 @@ Write-Host "Creating venv ..."
 python -m venv "$WorkDir\venv"
 & "$WorkDir\venv\Scripts\Activate.ps1"
 python -m pip install --upgrade pip | Out-Null
-Get-ChildItem "$($wheelDir.FullName)\*.whl" | ForEach-Object { python -m pip install $_.FullName }
+
+# Requirements first, build wheels second: the build's openvino / genai
+# wheels must override whatever PyPI openvino the requirements dragged in.
+python -m pip install -r "$PSScriptRoot\requirements.txt"
+Get-ChildItem "$($wheelDir.FullName)\*.whl" | ForEach-Object { python -m pip install --force-reinstall --no-deps $_.FullName }
 
 $env:MODEL_DIR = $ModelDir
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'

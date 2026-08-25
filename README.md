@@ -23,6 +23,17 @@ Build both from source, or use a prebuilt OpenVINO + GenAI archive of those
 branches; the runners below take either a wheel-carrying archive or an
 activated python environment.
 
+Python prerequisites (latest everything, including optimum-intel from git for
+the model export) are in `requirements.txt`. Install order matters: the
+requirements first, the build archive's `openvino` / `openvino_genai` wheels
+second, so the build's wheels override the PyPI openvino that optimum-intel
+pulls in. `run_demo.ps1` does this automatically; for a hand-built env:
+
+```bash
+pip install -r requirements.txt
+pip install --force-reinstall --no-deps /path/to/build/wheels/*.whl
+```
+
 ## Model
 
 Qwen3-0.6B, int4 symmetric, stateful export — the same model the PR's parity

@@ -1,0 +1,9 @@
+# Export + demo prerequisites, latest everything. Install this FIRST, then the
+# build archive's openvino / openvino_genai wheels on top: the PyPI openvino
+# that optimum-intel pulls in must lose to the build's own wheels.
+optimum-intel[openvino] @ git+https://github.com/huggingface/optimum-intel.git
+transformers
+torch
+accelerate
+sentencepiece
+huggingface_hub
