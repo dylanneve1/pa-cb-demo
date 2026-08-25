@@ -112,6 +112,33 @@ on all three prompt classes at PR 1. Note for anyone extending the harness:
 pass the same `KV_CACHE_PRECISION` to both pipelines if you set it at all —
 CPU defaults to a u8 KV cache.
 
+## Continuous batching benchmark
+
+The stock GenAI serving benchmark (`tools/continuous_batching/benchmark`)
+runs unmodified against the PA path — requests arrive as a Poisson stream and
+join the running batch mid-generation:
+
+```bash
+continuous_batching_benchmark -m <model> --device NPU \
+    --device_config '{"NPU_USE_NPUW":"YES","NPUW_PA":"YES"}' \
+    -n 16 --request_rate 2 --max_input_len 256 --max_output_len 64 \
+    --cache_size 4 --dataset ShareGPT_V3_unfiltered_cleaned_split.json
+```
+
+Measured at PR 1 (PA on CPU, 16 requests, 738 in / 919 out tokens, logs in
+`logs/`):
+
+| | NPU + NPUW_PA | plain CPU |
+|---|---|---|
+| Output throughput | 131 tok/s | 153 tok/s |
+| Mean TTFT | 158 ms | 127 ms |
+| Mean TPOT | 17 ms | 26 ms |
+
+Both runs generate the same 919 output tokens for the same request stream.
+The passthrough tracks the native CPU pipeline closely, which is the point
+at this stage: the dispatch layer adds little on top of the device it
+routes to.
+
 ## What to look for in the logs
 
 - Compile succeeds on `NPU` with `NPU_USE_NPUW=YES, NPUW_PA=YES` and no
