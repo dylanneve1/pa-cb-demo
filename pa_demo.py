@@ -20,8 +20,12 @@ import time
 
 import openvino_genai as og
 
-MODEL = os.environ.get("MODEL_DIR", "")
-if not MODEL:
+DEFAULT_MODELS = [
+    r"C:\npuw\models\current\LLM\Qwen3-0.6B_int4_sym_group-1_dyn_stateful",
+    "/opt/npuw/models/current/LLM/Qwen3-0.6B_int4_sym_group-1_dyn_stateful",
+]
+MODEL = os.environ.get("MODEL_DIR", "") or next((p for p in DEFAULT_MODELS if os.path.isdir(p)), "")
+if not MODEL or not os.path.isdir(MODEL):
     sys.exit("set MODEL_DIR to an int4 stateful LLM export (e.g. Qwen3-0.6B_int4)")
 
 PROMPTS = [
@@ -59,11 +63,13 @@ def demo_cb_pipeline():
     t0 = time.perf_counter()
     results = pipe.generate(PROMPTS, [gc] * len(PROMPTS))
     dt = time.perf_counter() - t0
-    total_tokens = sum(len(r.m_generation_ids) for r in results)
+    # ignore_eos + fixed max_new_tokens: every request generates exactly MAX_NEW.
+    total_tokens = MAX_NEW * len(results)
     for i, (prompt, res) in enumerate(zip(PROMPTS, results)):
         shown = prompt if len(prompt) < 70 else prompt[:67] + "..."
         print(f"\n--- request[{i}] prompt: {shown!r}")
-        print(res.m_generation_ids and pipe.get_tokenizer().decode(list(res.m_generation_ids)) or "(empty)")
+        # m_generation_ids carries the decoded text, one entry per sequence.
+        print(res.m_generation_ids[0] if res.m_generation_ids else "(empty)")
     print(f"\n[{len(PROMPTS)} requests batched, {total_tokens} tokens, {dt:.1f}s, {total_tokens / dt:.1f} tok/s]")
 
 

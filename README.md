@@ -37,7 +37,10 @@ pip install --force-reinstall --no-deps /path/to/build/wheels/*.whl
 ## Model
 
 Qwen3-0.6B, int4 symmetric, stateful export — the same model the PR's parity
-evidence used. Any int4 stateful LLM export works; point `MODEL_DIR` at it.
+evidence used. On the NPU machines it is already at
+`C:\npuw\models\current\LLM\Qwen3-0.6B_int4_sym_group-1_dyn_stateful`, which
+the scripts pick up automatically. Any int4 stateful LLM export works;
+point `MODEL_DIR` at it. To export one:
 
 ```bash
 optimum-cli export openvino -m Qwen/Qwen3-0.6B \
@@ -63,10 +66,19 @@ set it, set the same value for any pipeline you compare against.
 
 ## Run
 
-Windows:
+Windows, from an environment that already has the build's wheels:
 
 ```powershell
-.\run_demo.ps1 -Artifact C:\path\to\<build-archive>.zip -ModelDir C:\models\Qwen3-0.6B_int4
+.\run_demo.ps1
+```
+
+`ModelDir` defaults to the NPU machines' standard layout
+(`C:\npuw\models\current\LLM\Qwen3-0.6B_int4_sym_group-1_dyn_stateful`);
+the python scripts use the same default when `MODEL_DIR` is unset. To set up
+from a build archive instead:
+
+```powershell
+.\run_demo.ps1 -Artifact C:\path\to\<build-archive>.zip [-ModelDir C:\models\Qwen3-0.6B_int4]
 ```
 
 Linux (env with the build's wheels installed):

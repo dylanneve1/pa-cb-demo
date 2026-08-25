@@ -5,8 +5,12 @@ import sys
 
 import openvino_genai as og
 
-MODEL = os.environ.get("MODEL_DIR", "")
-if not MODEL:
+DEFAULT_MODELS = [
+    r"C:\npuw\models\current\LLM\Qwen3-0.6B_int4_sym_group-1_dyn_stateful",
+    "/opt/npuw/models/current/LLM/Qwen3-0.6B_int4_sym_group-1_dyn_stateful",
+]
+MODEL = os.environ.get("MODEL_DIR", "") or next((p for p in DEFAULT_MODELS if os.path.isdir(p)), "")
+if not MODEL or not os.path.isdir(MODEL):
     sys.exit("set MODEL_DIR to an int4 stateful LLM export (e.g. Qwen3-0.6B_int4)")
 
 # Short (single dyn/128 chunk), >128 (128-chunking), >1024 (1024+128+tail).

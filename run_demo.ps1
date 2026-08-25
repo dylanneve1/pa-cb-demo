@@ -1,48 +1,65 @@
-# PA CB demo runner (Windows box).
-# Extracts the BuildOV-Win artifact, sets up a venv, runs the demo and the
-# parity check, and tees every run into logs\.
+# PA CB demo runner (Windows).
 #
-# Usage:
-#   .\run_demo.ps1 -Artifact C:\path\to\openvino-genai-win-...-pa-cb-demo-pr1.zip -ModelDir C:\models\Qwen3-0.6B_int4_sym_group-1_dyn_stateful
+# Two modes:
+#   - Active environment (default): run from a python env that already has the
+#     build's openvino + openvino_genai wheels. No artifact needed.
+#       .\run_demo.ps1
+#   - From an artifact: extract the build archive, create a venv, install
+#     requirements, then the build's wheels on top.
+#       .\run_demo.ps1 -Artifact C:\path\to\<build-archive>.zip
+#
+# ModelDir defaults to the NPU machines' standard layout; override for a
+# different model or location. Every run is teed into logs\.
 
 param(
-    [Parameter(Mandatory = $true)][string]$Artifact,
-    [Parameter(Mandatory = $true)][string]$ModelDir,
+    [string]$Artifact = '',
+    [string]$ModelDir = 'C:\npuw\models\current\LLM\Qwen3-0.6B_int4_sym_group-1_dyn_stateful',
     [string]$WorkDir = "$PSScriptRoot\work"
 )
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (Test-Path $Artifact)) {
-    Write-Host "Artifact not found: $($Artifact)"
-    exit 1
-}
 if (-not (Test-Path $ModelDir)) {
     Write-Host "Model dir not found: $($ModelDir)"
     exit 1
 }
 
 $logs = "$PSScriptRoot\logs"
-New-Item -ItemType Directory -Force -Path $WorkDir, $logs | Out-Null
+New-Item -ItemType Directory -Force -Path $logs | Out-Null
 
-Write-Host "Extracting $($Artifact) ..."
-tar -xf $Artifact -C $WorkDir
+if ($Artifact) {
+    if (-not (Test-Path $Artifact)) {
+        Write-Host "Artifact not found: $($Artifact)"
+        exit 1
+    }
+    New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
+    Write-Host "Extracting $($Artifact) ..."
+    tar -xf $Artifact -C $WorkDir
 
-$wheelDir = Get-ChildItem -Recurse -Directory $WorkDir | Where-Object { $_.Name -eq 'wheels' } | Select-Object -First 1
-if (-not $wheelDir) {
-    Write-Host "No wheels directory inside the artifact."
-    exit 1
+    $wheelDir = Get-ChildItem -Recurse -Directory $WorkDir | Where-Object { $_.Name -eq 'wheels' } | Select-Object -First 1
+    if (-not $wheelDir) {
+        Write-Host "No wheels directory inside the artifact."
+        exit 1
+    }
+
+    Write-Host "Creating venv ..."
+    python -m venv "$WorkDir\venv"
+    & "$WorkDir\venv\Scripts\Activate.ps1"
+    python -m pip install --upgrade pip | Out-Null
+
+    # Requirements first, build wheels second: the build's openvino / genai
+    # wheels must override whatever PyPI openvino the requirements dragged in.
+    python -m pip install -r "$PSScriptRoot\requirements.txt"
+    Get-ChildItem "$($wheelDir.FullName)\*.whl" | ForEach-Object { python -m pip install --force-reinstall --no-deps $_.FullName }
+} else {
+    python -c "import openvino_genai" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "openvino_genai not importable in the active environment."
+        Write-Host "Activate an env with the build's wheels, or pass -Artifact <build-archive>.zip"
+        exit 1
+    }
+    Write-Host "Using the active python environment."
 }
-
-Write-Host "Creating venv ..."
-python -m venv "$WorkDir\venv"
-& "$WorkDir\venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip | Out-Null
-
-# Requirements first, build wheels second: the build's openvino / genai
-# wheels must override whatever PyPI openvino the requirements dragged in.
-python -m pip install -r "$PSScriptRoot\requirements.txt"
-Get-ChildItem "$($wheelDir.FullName)\*.whl" | ForEach-Object { python -m pip install --force-reinstall --no-deps $_.FullName }
 
 $env:MODEL_DIR = $ModelDir
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
