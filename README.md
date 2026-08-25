@@ -87,6 +87,13 @@ Linux (env with the build's wheels installed):
 MODEL_DIR=/path/to/Qwen3-0.6B_int4 ./run_demo.sh /path/to/venv
 ```
 
+Running a script by hand, `--npuw-log` turns on NPUW plugin logging without
+touching the environment:
+
+```powershell
+python pa_demo.py --npuw-log INFO      # or VERBOSE; pa_parity.py takes it too
+```
+
 Three runs land in `logs/`, timestamped:
 
 | Log | Shows |

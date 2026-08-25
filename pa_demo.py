@@ -18,6 +18,16 @@ import os
 import sys
 import time
 
+# --npuw-log LEVEL (e.g. INFO, VERBOSE) turns on NPUW plugin logging; it must
+# land in the environment before the plugin compiles anything.
+if "--npuw-log" in sys.argv:
+    i = sys.argv.index("--npuw-log")
+    try:
+        os.environ["OPENVINO_NPUW_LOG_LEVEL"] = sys.argv[i + 1]
+    except IndexError:
+        sys.exit("--npuw-log needs a level: ERROR, WARNING, INFO, VERBOSE")
+    del sys.argv[i:i + 2]
+
 import openvino_genai as og
 
 DEFAULT_MODELS = [
