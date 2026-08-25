@@ -1,0 +1,70 @@
+# PA CB demo — NPUW PagedAttention front-end, PR 1
+
+Demonstrates the first change of the NPUW PA front-end series
+([openvino#37282](https://github.com/openvinotoolkit/openvino/pull/37282)):
+the OpenVINO GenAI `ContinuousBatchingPipeline` deploying its dynamic,
+stateless PA model **through the NPU plugin**, executed 1:1 on the PA
+fallback device (CPU at this stage of the series), with token-identical
+output to the plain CPU pipeline.
+
+The build also carries a GenAI routing change
+([`dneve/pa-frontend-npu-cb-routing`](https://github.com/dylanneve1/openvino.genai/tree/dneve/pa-frontend-npu-cb-routing)):
+a plain `LLMPipeline(model, "NPU", NPUW_PA=YES)` is routed through the CB/PA
+pipeline, so the PA path is one property away for a normal user.
+
+## Sources
+
+| Component | Branch |
+|---|---|
+| OpenVINO | [`dylanneve1/openvino @ pa/01-frontend-skeleton`](https://github.com/dylanneve1/openvino/tree/pa/01-frontend-skeleton) (PR [#37282](https://github.com/openvinotoolkit/openvino/pull/37282)) |
+| OpenVINO GenAI | [`dylanneve1/openvino.genai @ dneve/pa-frontend-npu-cb-routing`](https://github.com/dylanneve1/openvino.genai/tree/dneve/pa-frontend-npu-cb-routing) |
+
+Build both from source, or use a prebuilt OpenVINO + GenAI archive of those
+branches; the runners below take either a wheel-carrying archive or an
+activated python environment.
+
+## Model
+
+Qwen3-0.6B, int4 symmetric, stateful export — the same model the PR's parity
+evidence used. Any int4 stateful LLM export works; point `MODEL_DIR` at it.
+
+```bash
+optimum-cli export openvino -m Qwen/Qwen3-0.6B \
+    --weight-format int4_sym_g-1 --task text-generation-with-past Qwen3-0.6B_int4
+```
+
+## Run
+
+Windows:
+
+```powershell
+.\run_demo.ps1 -Artifact C:\path\to\<build-archive>.zip -ModelDir C:\models\Qwen3-0.6B_int4
+```
+
+Linux (env with the build's wheels installed):
+
+```bash
+MODEL_DIR=/path/to/Qwen3-0.6B_int4 ./run_demo.sh /path/to/venv
+```
+
+Three runs land in `logs/`, timestamped:
+
+| Log | Shows |
+|---|---|
+| `*_01_demo.log` | Batched CB generation + `LLMPipeline` routing, readable output, tok/s |
+| `*_02_demo_npuw_info.log` | Same with `OPENVINO_NPUW_LOG_LEVEL=INFO` — the PA front-end visibly engaging |
+| `*_03_parity.log` | Greedy token parity, plain `CPU` vs `NPU + NPU_USE_NPUW/NPUW_PA`, three prompt classes (short / >128 / >1024) — expected `PARITY: PASS`, token-identical on all three |
+
+The parity expectation matches the PR's Validation section: token-identical
+on all three prompt classes at PR 1. Note for anyone extending the harness:
+pass the same `KV_CACHE_PRECISION` to both pipelines if you set it at all —
+CPU defaults to a u8 KV cache.
+
+## What to look for in the logs
+
+- Compile succeeds on `NPU` with `NPU_USE_NPUW=YES, NPUW_PA=YES` and no
+  other configuration: no geometry stamping, no model mutation — the ports
+  the pipeline's KVCacheManager reads are the executing device's own.
+- The INFO log names `PACompiledModel` taking the model and the fallback
+  device it compiled on.
+- `PARITY: PASS`.
