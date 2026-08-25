@@ -33,6 +33,23 @@ optimum-cli export openvino -m Qwen/Qwen3-0.6B \
     --weight-format int4_sym_g-1 --task text-generation-with-past Qwen3-0.6B_int4
 ```
 
+## Config
+
+`config/npuw_pa.json` is the whole thing — usable with any driver that takes a
+benchmark_app-style plugin config on device `NPU`:
+
+```json
+{
+    "NPU_USE_NPUW": "YES",
+    "NPUW_PA": "YES"
+}
+```
+
+Nothing else is needed at this stage of the series: the PA fallback device is
+internal (defaults to CPU; `OPENVINO_NPUW_PA_DEVICE` env var for development),
+and `KV_CACHE_PRECISION` is left to the executing device's default — if you do
+set it, set the same value for any pipeline you compare against.
+
 ## Run
 
 Windows:

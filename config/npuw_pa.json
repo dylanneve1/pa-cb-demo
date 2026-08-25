@@ -1,0 +1,4 @@
+{
+    "NPU_USE_NPUW": "YES",
+    "NPUW_PA": "YES"
+}
